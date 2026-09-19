@@ -5,7 +5,7 @@
 - **Specification:** [`did-method-cimd.md`](./did-method-cimd.md)
 - **Method name:** `cimd` · **Example:** `did:cimd:example.com:agents:billing`
 - **Trust root:** the client's HTTPS origin
-- **Status:** v1.0, profiling [draft-ietf-oauth-client-id-metadata-document-02](https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/)
+- **Status:** v1.1, profiling [draft-ietf-oauth-client-id-metadata-document-02](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-client-id-metadata-document-02)
 
 ## Why
 
@@ -23,7 +23,7 @@ The method is not agent-specific. Any OAuth client that publishes a CIMD qualifi
 did:cimd:example.com:agents:billing
   -> https://example.com/agents/billing        (the CIMD; client_id must equal this URL)
   -> jwks / jwks_uri (same origin)             (keys, filtered to signature-verification keys)
-  -> DID Document: verificationMethod, authentication, assertionMethod
+  -> DID Document: verificationMethod, authentication
 ```
 
 `410 Gone` at the document URL means the DID is deactivated.
