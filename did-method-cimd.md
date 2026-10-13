@@ -1,4 +1,4 @@
-# The `did:cimd` DID Method Specification (v1.1)
+# The `did:cimd` DID Method Specification (v0.2)
 
 A DID method that treats an **OAuth Client ID Metadata Document** (CIMD) a client already publishes as the identity document. No registry, no ledger, no extra registration step. The URL used as the client identifier is the identifier, and the public keys that document points at are the verification keys.
 
@@ -105,7 +105,7 @@ Authorization for every operation is determined by control of the base URL's HTT
 The controller chooses an identity key and publishes a CIMD according to the profile below. There is no third-party registration step.
 
 1. The document MUST be served at `B`, and its `client_id` MUST equal `B`. This is a CIMD requirement.
-2. The identity key MUST be declared via **exactly one** of `jwks` or `jwks_uri`, both permitted by CIMD. A document carrying both is invalid under this profile (3.2, step 3).
+2. The identity key MAY be declared via **at most one** of `jwks` or `jwks_uri`, both permitted by CIMD. A document carrying **neither** is a keyless identity: it resolves to a DID Document with an empty `verificationMethod` (3.2, steps 3 and 6), suitable as a stable subject name but not for authentication. A document carrying **both** is invalid under this profile (3.2, step 3).
 3. A `jwks_uri` MUST be on the same HTTPS origin as `B`. CIMD itself does not constrain its origin; this is a constraint this method adds.
 4. A key JWK MAY carry a `kid`. It is preserved in the DID Document but does not form the verification method identifier (3.2, step 4).
 5. A CIMD carries no signature of its own. The document and its keys are protected by TLS and same-origin placement only. This reflects the current state of the underlying specification, not a design preference: should CIMD adopt a signed-metadata option, this specification is expected to require it.
@@ -119,19 +119,19 @@ The controller chooses an identity key and publishes a CIMD according to the pro
    - `404` or anything else: `notFound`.
 
    The redirect rule follows the profiled CIMD revision, which forbids following redirects when fetching the document. It is load-bearing rather than incidental: `client_id` is checked against the requested URL by exact string comparison, so a followed redirect would leave the served document's `client_id` disagreeing with the URL actually fetched, and would let whoever controls DNS or the HTTP front end move an established identity to another origin.
-3. **Extract keys.** Take `jwks`, or fetch the JWK Set at `jwks_uri`. If both members are present, `notFound`: RFC 7591 treats the two as mutually exclusive, and guessing which one the publisher meant would let two resolvers disagree about a subject's keys. Discard any secret parameters found. **Retain only keys usable for verifying signatures:** discard a JWK whose `use` is present and is not `"sig"`, and one whose `key_ops` is present and does not include `"verify"`; a JWK carrying neither member is retained. Discard a JWK that lacks the members its `kty` requires, since step 4 cannot be computed for it. If no key remains, `notFound`.
+3. **Extract keys.** If **neither** `jwks` nor `jwks_uri` is present, the document declares no key: this is a keyless identity, and resolution proceeds with no retained keys (step 6). Otherwise take `jwks`, or fetch the JWK Set at `jwks_uri`. If both members are present, `notFound`: RFC 7591 treats the two as mutually exclusive, and guessing which one the publisher meant would let two resolvers disagree about a subject's keys. Discard any secret parameters found. **Retain only keys usable for verifying signatures:** discard a JWK whose `use` is present and is not `"sig"`, and one whose `key_ops` is present and does not include `"verify"`; a JWK carrying neither member is retained. Discard a JWK that lacks the members its `kty` requires, since step 4 cannot be computed for it. If one of the two members **is** present but no valid key remains — including an empty key set — `notFound`: a document that carries keys yet yields none is treated as misconfigured, not as deliberately keyless, so a transient or tampered key set fails closed rather than silently downgrading to a keyless identity.
 4. **Identify keys.** The verification method identifier of a retained key is `<DID>#<thumbprint>`, where `<thumbprint>` is the base64url-encoded, unpadded SHA-256 JWK Thumbprint of that key ([RFC 7638](https://www.rfc-editor.org/rfc/rfc7638)).
 
    `kid` is not used for this. [RFC 7517](https://www.rfc-editor.org/rfc/rfc7517) leaves the structure of `kid` unspecified and only recommends uniqueness, so a published value may be empty, may contain characters that are invalid in a URI fragment, or may repeat within one key set and collide. A thumbprint is derived from the key material: always present, always fragment-safe, and distinct for distinct keys. `did:jwk`, ACME and the `jkt` confirmation claim of OAuth DPoP identify keys the same way. A `kid`, where published, is preserved inside `publicKeyJwk`, so software that selects keys by `kid` — OAuth client authentication in particular — is unaffected.
-5. **Assign verification relationships.** A retained key is referenced from `authentication` and from nothing else. This method defines no `assertionMethod`, `keyAgreement`, `capabilityInvocation` or `capabilityDelegation`.
+5. **Assign verification relationships.** A retained key is referenced from `authentication` and from nothing else. This method defines no `assertionMethod`, `keyAgreement`, `capabilityInvocation` or `capabilityDelegation`. A keyless identity (step 3) retains no key, so `authentication` is empty: the DID asserts only control of the origin, has no verification relationship, and MUST NOT be used for holder binding or client authentication.
 
    A key published in a CIMD is published for OAuth client authentication. It proves that the party presenting it is the client named by `client_id` — that is what a `private_key_jwt` `client_assertion` states, addressed to one token endpoint and replay-protected by `jti`. It carries no authorization to sign arbitrary statements on behalf of the DID subject, and this method MUST NOT infer one.
 
    A subject may hold keys it uses more broadly; an agent that authenticates with `private_key_jwt` and also signs a Verifiable Presentation for a `cnf`-bound credential holds two capabilities, not one. Expressing that requires the controller to declare a key's purposes, and a declaration mechanism is deferred to a later revision (section 7) rather than assumed here. Until then, a relationship this method does not assign is one the document does not claim.
 6. **Assemble the DID Document.**
    - `id` = the requested DID.
-   - `verificationMethod` = for each retained key, `{ id: <DID>#<thumbprint>, type: "JsonWebKey2020", controller: <DID>, publicKeyJwk }`.
-   - `authentication` = every retained key, per step 5.
+   - `verificationMethod` = for each retained key, `{ id: <DID>#<thumbprint>, type: "JsonWebKey2020", controller: <DID>, publicKeyJwk }`; an empty array for a keyless identity (step 3).
+   - `authentication` = every retained key, per step 5; an empty array for a keyless identity.
    - `service` = `{ id: <DID>#cimd, type: <cimd-service-type>, serviceEndpoint: B }`, where `<cimd-service-type>` is the absolute URI `https://www.ietf.org/archive/id/draft-ietf-oauth-client-id-metadata-document-02.html#name-client-id-metadata-document`. An absolute URI is used rather than a short name such as `OAuthClientMetadata`, because a short name is a JSON-LD term and would have to be defined in a context this method does not publish. Registering a short service type is future work (section 7).
    - `alsoKnownAs` SHOULD contain the CIMD `client_id` (= `B`).
 
@@ -218,18 +218,21 @@ This specification is published under the [Apache License 2.0](./LICENSE). Imple
 
 ## 9. Changelog
 
-**1.1** — Registry review feedback.
+Versions 0.1 and 0.2 were first published as 1.0 and 1.1. The numbering changed; the content of each did not.
 
-- Section 2: `authority`, `port` and `pct-encoded` added to the ABNF, so that the port syntax the prose already described is expressible; canonical form stated; DID-to-URL and URL-to-DID given as inverse procedures, with a port example. The `%3A` decoding of 1.0 applied to the whole identifier and would have corrupted an encoded path segment; it now applies to the authority alone.
+**0.2** — Registry review feedback.
+
+- Section 2: `authority`, `port` and `pct-encoded` added to the ABNF, so that the port syntax the prose already described is expressible; canonical form stated; DID-to-URL and URL-to-DID given as inverse procedures, with a port example. The `%3A` decoding of 0.1 applied to the whole identifier and would have corrupted an encoded path segment; it now applies to the authority alone.
 - 3.2 step 2: redirects are no longer followed at all, replacing the same-origin allowance, with the reason recorded. The redirect-count limit in section 4 is dropped as moot.
 - 3.2 step 4: verification method identifiers are RFC 7638 thumbprints. `kid` is no longer required by 3.1 and no longer forms the identifier; it is preserved in `publicKeyJwk`.
-- 3.2 step 5: a retained key is referenced from `authentication` alone. `assertionMethod`, which 1.0 granted to every key, is no longer assigned by this method at all; a mechanism for declaring key purposes is deferred to a later revision (section 7).
+- 3.2 step 5: a retained key is referenced from `authentication` alone. `assertionMethod`, which 0.1 granted to every key, is no longer assigned by this method at all; a mechanism for declaring key purposes is deferred to a later revision (section 7).
 - 3.1 item 2 and 3.2 step 3: a document carrying both `jwks` and `jwks_uri` is invalid.
 - The `service` entry keeps its place, but its `type` is now the absolute URI of the CIMD section that defines the document, in place of the short name `OAuthClientMetadata`, which was never defined in any JSON-LD context.
 - 3.4: the exact resolution result for `410` is specified — `didDocument` null, `didDocumentMetadata.deactivated` true, no error — and distinguished from `404`.
 - The CIMD reference is pinned to the immutable revision 02 URL.
+- 3.1 item 2, 3.2 steps 3, 5 and 6: a CIMD declaring neither `jwks` nor `jwks_uri` now resolves to a keyless identity — a DID Document with an empty `verificationMethod` and `authentication`, usable as a stable subject name but not for authentication or holder binding. A document that carries a key set but yields no valid key still returns `notFound`, so only the deliberate absence of both members is keyless.
 
-**1.0** — Initial publication.
+**0.1** — Initial publication.
 
 ## References
 
