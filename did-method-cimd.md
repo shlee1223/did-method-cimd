@@ -1,4 +1,4 @@
-# The `did:cimd` DID Method Specification (v1.1)
+# The `did:cimd` DID Method Specification (v0.2)
 
 A DID method that treats an **OAuth Client ID Metadata Document** (CIMD) a client already publishes as the identity document. No registry, no ledger, no extra registration step. The URL used as the client identifier is the identifier, and the public keys that document points at are the verification keys.
 
@@ -218,18 +218,20 @@ This specification is published under the [Apache License 2.0](./LICENSE). Imple
 
 ## 9. Changelog
 
-**1.1** — Registry review feedback.
+Versions 0.1 and 0.2 were first published as 1.0 and 1.1. The numbering changed; the content of each did not.
 
-- Section 2: `authority`, `port` and `pct-encoded` added to the ABNF, so that the port syntax the prose already described is expressible; canonical form stated; DID-to-URL and URL-to-DID given as inverse procedures, with a port example. The `%3A` decoding of 1.0 applied to the whole identifier and would have corrupted an encoded path segment; it now applies to the authority alone.
+**0.2** — Registry review feedback.
+
+- Section 2: `authority`, `port` and `pct-encoded` added to the ABNF, so that the port syntax the prose already described is expressible; canonical form stated; DID-to-URL and URL-to-DID given as inverse procedures, with a port example. The `%3A` decoding of 0.1 applied to the whole identifier and would have corrupted an encoded path segment; it now applies to the authority alone.
 - 3.2 step 2: redirects are no longer followed at all, replacing the same-origin allowance, with the reason recorded. The redirect-count limit in section 4 is dropped as moot.
 - 3.2 step 4: verification method identifiers are RFC 7638 thumbprints. `kid` is no longer required by 3.1 and no longer forms the identifier; it is preserved in `publicKeyJwk`.
-- 3.2 step 5: a retained key is referenced from `authentication` alone. `assertionMethod`, which 1.0 granted to every key, is no longer assigned by this method at all; a mechanism for declaring key purposes is deferred to a later revision (section 7).
+- 3.2 step 5: a retained key is referenced from `authentication` alone. `assertionMethod`, which 0.1 granted to every key, is no longer assigned by this method at all; a mechanism for declaring key purposes is deferred to a later revision (section 7).
 - 3.1 item 2 and 3.2 step 3: a document carrying both `jwks` and `jwks_uri` is invalid.
 - The `service` entry keeps its place, but its `type` is now the absolute URI of the CIMD section that defines the document, in place of the short name `OAuthClientMetadata`, which was never defined in any JSON-LD context.
 - 3.4: the exact resolution result for `410` is specified — `didDocument` null, `didDocumentMetadata.deactivated` true, no error — and distinguished from `404`.
 - The CIMD reference is pinned to the immutable revision 02 URL.
 
-**1.0** — Initial publication.
+**0.1** — Initial publication.
 
 ## References
 

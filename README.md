@@ -5,7 +5,7 @@
 - **Specification:** [`did-method-cimd.md`](./did-method-cimd.md)
 - **Method name:** `cimd` · **Example:** `did:cimd:example.com:agents:billing`
 - **Trust root:** the client's HTTPS origin
-- **Status:** v1.1, profiling [draft-ietf-oauth-client-id-metadata-document-02](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-client-id-metadata-document-02)
+- **Status:** v0.2, profiling [draft-ietf-oauth-client-id-metadata-document-02](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-client-id-metadata-document-02)
 
 ## Why
 
