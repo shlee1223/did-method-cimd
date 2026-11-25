@@ -1,40 +1,46 @@
 # did:cimd - a DID method for OAuth clients
 
-> `did:cimd` is an independent work. It is not part of, affiliated with, or endorsed by the OAuth Client ID Metadata Document specification, its authors, or the IETF OAuth Working Group.
+> `did:cimd` is an independent work. It is not part of, affiliated with, or endorsed by the OAuth Client ID Metadata Document specification, its authors, or the IETF OAuth Working Group. It follows the CIMD specification and respects its authority.
 
-`did:cimd` resolves a client's keys from the **OAuth Client ID Metadata Document** (CIMD) it already publishes. No registry, no ledger, no extra registration step. The HTTPS URL a client already uses as its `client_id` becomes the identifier, and the keys that document designates become the verification keys.
+`did:cimd` is for DID-based systems that need to resolve an OAuth client. It maps the **OAuth Client ID Metadata Document** (CIMD) a client already publishes to a DID Document. No registry, no ledger, no registration step.
 
 - **Specification:** [`did-method-cimd.md`](./did-method-cimd.md)
-- **Method name:** `cimd` · **Example:** `did:cimd:example.com:agents:billing`
-- **Trust root:** the client's HTTPS origin
-- **Status:** v0.2, profiling [draft-ietf-oauth-client-id-metadata-document-02](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-client-id-metadata-document-02)
+- **Method name:** `cimd` · **Example:** `did:cimd:example.com:clients:billing`
+- **Trust root:** the HTTPS origin that serves the CIMD
+- **Status:** experimental, v0.3, profiling [draft-ietf-oauth-client-id-metadata-document-03](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-client-id-metadata-document-03)
 
 ## Why
 
-AI agents are numerous, short-lived, and cross organizational boundaries. Nobody can hand-register each one with every server it meets, and the industry's answer is CIMD: use an HTTPS URL as the client identifier, and serve the client's metadata at that URL. The Model Context Protocol authorization specification puts it first, calling it the case "when client and server have no prior relationship (most common)", while Dynamic Client Registration is kept only for backwards compatibility.
+Systems that identify parties by DID look keys up through a DID resolver and key their policies and trust registries by DID. An OAuth client that publishes a CIMD already has a URL as its identifier and a document that can be fetched from it, yet such a system cannot resolve it. `did:cimd` closes that gap with one resolution rule and nothing new to publish.
 
-Those clients already publish a stable identifier, a resolvable document, the public keys they authenticate with, and a rotation path. Everything a DID does is already happening; only the name is missing. `did:cimd` supplies the name, so the same key can identify the client in DID- and credential-based systems with no second document to publish.
+A `did:cimd` and a Client Identifier URL name the same client, and each converts to the other without loss. They are used in different places: OAuth protocol messages carry the URL, and DID contexts carry the DID.
 
-An agent also needs a name for a different reason: delegation. To record who delegated what to whom, and to verify it later, the subject of the delegation needs a stable identifier. A registration id minted anew on each connection cannot serve as one.
+## What it does not do
 
-The method is not agent-specific. Any OAuth client that publishes a CIMD qualifies.
+- It does not identify an agent, an instance, a user, or whoever the software acts for. The subject is the OAuth client software, which many users and instances may share.
+- It is not decentralized. The identifier is controlled by a single HTTPS origin.
+- It does not place any requirement on CIMD publishers, and adds no lifecycle of its own. There is no deactivation and no revocation.
+- It does not give the published keys any purpose beyond OAuth client authentication to an authorization server.
+
+See sections 1.1 and 1.2 of the specification.
 
 ## How it resolves
 
 ```
-did:cimd:example.com:agents:billing
-  -> https://example.com/agents/billing        (the CIMD; client_id must equal this URL)
+did:cimd:example.com:clients:billing
+  -> https://example.com/clients/billing       (the CIMD; client_id must equal this URL)
   -> jwks / jwks_uri (same origin)             (keys, filtered to signature-verification keys)
-  -> DID Document: verificationMethod, authentication
+  -> DID Document: alsoKnownAs, verificationMethod,
+     authentication (only if the CIMD declares private_key_jwt)
 ```
 
-`410 Gone` at the document URL means the DID is deactivated.
+Any response other than `200 OK` means the DID does not resolve. A network failure is a transient error and says nothing about the DID. A client that publishes no keys resolves to a document with no verification method: a name, and nothing that can be authenticated.
 
 ## Repository layout
 
 ```
 did-method-cimd.md                          # the specification
-registration/w3c-did-extensions/cimd.json   # entry to submit to w3c/did-extensions (methods/cimd.json)
+registration/w3c-did-extensions/cimd.json   # entry registered in w3c/did-extensions (methods/cimd.json)
 ```
 
 ## License
