@@ -1,5 +1,7 @@
 # did:cimd - a DID method for OAuth clients
 
+> `did:cimd` is an independent work. It is not part of, affiliated with, or endorsed by the OAuth Client ID Metadata Document specification, its authors, or the IETF OAuth Working Group.
+
 `did:cimd` resolves a client's keys from the **OAuth Client ID Metadata Document** (CIMD) it already publishes. No registry, no ledger, no extra registration step. The HTTPS URL a client already uses as its `client_id` becomes the identifier, and the keys that document designates become the verification keys.
 
 - **Specification:** [`did-method-cimd.md`](./did-method-cimd.md)
